@@ -1,24 +1,13 @@
-#' Tree reconstruction via maximum parsimony
-#'
-#' `maximum_parsimony` determines the single, best fitting among the given tree topologies by maximum parsimony for given data. The respective determined costs wil be attached to the phylo object.\cr\cr
-#' `all_parsimony_rooted_trees` performs parsimony for all tree topologies given. The respective determined costs wil be attached to the phylo objects.\cr\cr
-#' `small_parsimony performs` parsimony for one tree topology. The respective determined costs wil be attached to the phylo object.
-#' @param states_table Matrix or data frame containing numericals representing an alignment of states with sites as rows and species/strains as columns.
-#' @param rooted_trees List of rooted tree topologies of class phylo (ape) to be analyzed.
-#' @param rooted_tree Rooted tree topology of class phylo (ape) to be analyzed.
+
 #' @export
-#' @examples
-#' test
 maximum_parsimony=function(states_table,rooted_trees){
   rooted_trees=all_parsimony_rooted_trees(states_table,rooted_trees)
   rooted_trees[[which.min(sapply(simplify=F,rooted_trees,function(tree) tree$cost_sum))]]
 }
 
-#' @rdname  maximum_parsimony
 #' @export
 all_parsimony_rooted_trees=function(states_table,rooted_trees) sapply(simplify=F,rooted_trees,function(tree) small_parsimony(states_table,tree))
 
-#' @rdname  maximum_parsimony
 #' @export
 small_parsimony=function(states_table,rooted_tree){
   tree.root=rooted_tree$edge[1,1]
