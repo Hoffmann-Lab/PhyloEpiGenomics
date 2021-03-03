@@ -1,13 +1,26 @@
-
+#' Tree reconstruction via maximum parsimony
+#'
+#' `maximum_parsimony` determines the single, best fitting among the given tree topologies by maximum parsimony for given data. The respective determined costs wil be attached to the returning phylo object.\cr\cr
+#' `all_parsimony_rooted_trees` performs parsimony for all tree topologies given. The respective determined costs wil be attached to the phylo objects.\cr\cr
+#' `small_parsimony performs` parsimony for one tree topology. The respective determined costs wil be attached to the phylo object.
+#' @param states_table Matrix or data frame containing numericals representing an alignment of interval or ordinal scaled states with sites as rows and species/strains as columns.
+#' @param rooted_trees List of rooted tree topologies of class phylo (library ape) to be analyzed.
+#' @param rooted_tree Rooted tree topology of class phylo (library ape) to be analyzed.
+#' @details 
+#' These functions work on any interval scaled data such as methylation fractions or ordinal scaled data such as descritized methylation data. They do not work, however, on nominal scaled data, such as nucleotides.
+#' @examples
+#' test
 #' @export
 maximum_parsimony=function(states_table,rooted_trees){
   rooted_trees=all_parsimony_rooted_trees(states_table,rooted_trees)
   rooted_trees[[which.min(sapply(simplify=F,rooted_trees,function(tree) tree$cost_sum))]]
 }
 
+#' @rdname  maximum_parsimony
 #' @export
 all_parsimony_rooted_trees=function(states_table,rooted_trees) sapply(simplify=F,rooted_trees,function(tree) small_parsimony(states_table,tree))
 
+#' @rdname  maximum_parsimony
 #' @export
 small_parsimony=function(states_table,rooted_tree){
   tree.root=rooted_tree$edge[1,1]
@@ -395,8 +408,67 @@ fitch_margoliash=function(tree,distance_matrix){
   newTree=tree
   optimal_branch_lengths=optim(initial_lengths,method="L-BFGS-B",lower=0.1,upper=100000,function(branch_lengths){
     newTree$edge.length<<-branch_lengths
-    deviation=abs(tree_to_distance_matrix(newTree)-distance_matrix)
+    deviation=tree_to_distance_matrix(newTree)-distance_matrix
     return(sum(deviation^2))
   })
   return(list(tree=newTree,deviation=optimal_branch_lengths$value^0.5,convergence=(optimal_branch_lengths$convergence==0)))
+}
+
+#' @export
+discretize=function(frequency_alignment,discretization) apply(frequency_alignment,c(1,2), function(x) which(sapply(discretization, function(y) x>y[1] && x<=y[2])))
+
+#' @export
+make_evolutionary_model=function(states_table=NULL,nstates=NULL,model="JC69",pi=NULL,kappa=NULL){
+  model=tolower(model)
+  if(model!="jc69" && model!="k80" && model!="f81" && model!="hky85" && model!="cooc" && model!="nojump") stop("\"",paste0(model, "\" is no valid model."))
+  if (is.null(pi)) {
+    states_distr_abs=sapply(colnames(states_table), function(species) as.numeric(table(states_table[,species])))
+    states_distr_rel=apply(states_distr_abs,2,function(x) x/sum(x))
+    pi=apply(states_distr_rel,1,function(x) sum(x)/ncol(states_distr_rel))
+  }
+  if ((model=="k80" || model=="hky85") && is.null(kappa)) kappa=estimate_kappa(states_table)
+  if (model=="nojump"){
+    Q=sapply(1:nstates,function(x) sapply(1:nstates, function(y)  if (abs(x-y)==1) pi[x] else 0))
+  } else if (model=="cooc"){
+    species_pairs=combn(colnames(states_table),2)
+    colnames(species_pairs)=apply(species_pairs,2,function(x) paste0(x,collapse = "_"))
+    cooccurrence_matrices=sapply(simplify=F, 1:ncol(species_pairs),function(x) matrix(0,nrow=nstates,ncol=nstates))
+    names(cooccurrence_matrices)=colnames(species_pairs)
+    h=apply(states_table,1, function(line){
+      sapply(colnames(species_pairs), function(species_pair)
+        cooccurrence_matrices[[species_pair]][line[species_pairs[1,species_pair]],line[species_pairs[2,species_pair]]]<<-cooccurrence_matrices[[species_pair]][line[species_pairs[1,species_pair]],line[species_pairs[2,species_pair]]]+1 )
+    })
+    
+    cooccurrence_matrices_balanced=cooccurrence_matrices
+    h=sapply(1:length(cooccurrence_matrices_balanced), function(i){ 
+      sapply(1:(nstates-1), function(a) {
+        sapply((a+1):nstates, function(b) cooccurrence_matrices_balanced[[i]][a,b]<<-cooccurrence_matrices_balanced[[i]][b,a]<<-cooccurrence_matrices_balanced[[i]][a,b]+cooccurrence_matrices_balanced[[i]][b,a] )
+        cooccurrence_matrices_balanced[[i]][a,a]<<-0
+      })
+      cooccurrence_matrices_balanced[[i]][nstates,nstates]<<-0
+    })  
+    
+    cooccurrence_matrices_balanced_frac=sapply(simplify = F, cooccurrence_matrices_balanced, function(x) x/sum(x)*2)
+    cooccurrence_matrices_balanced_frac_all=Reduce("+",cooccurrence_matrices_balanced_frac)/length(cooccurrence_matrices_balanced_frac)
+    
+    Q=sapply(1:nstates,function(x) sapply(1:nstates, function(y)  pi[x]*cooccurrence_matrices_balanced_frac_all[x,y]))
+  } else if (model=="jc69") Q=matrix(c(0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0),ncol=4,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
+  else if (model=="k80") Q=matrix(c(0,1,kappa,1,1,0,1,kappa,kappa,1,0,1,1,kappa,1,0),ncol=4,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
+  else if (model=="f81") Q=matrix(c(0,pi[2],pi[3],pi[4],pi[1],0,pi[3],pi[4],pi[1],pi[2],0,pi[4],pi[1],pi[2],pi[3],0),ncol=4,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
+  else if (model=="hky85") Q=matrix(c(0,pi[2],pi[3]*kappa,pi[4],pi[1],0,pi[3],pi[4]*kappa,pi[1]*kappa,pi[2],0,pi[4],pi[1],pi[2]*kappa,pi[3],0),ncol=4,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
+  Q=Q/sum(rowSums(Q)*pi)/100#PEM calibration
+  sapply(1:nrow(Q), function (x) Q[x,x]<<- -sum(Q[x,]))
+  return(list(Q=Q,pi=pi))
+}
+
+estimate_kappa=function(states_table){
+  species_pairs=combn(colnames(states_table),2)
+  transitions=0
+  transversions=0
+  apply(species_pairs,2,function(species_pair) apply(states_table[,species_pair],1,function(x) if (x[1]!=x[2]){
+    x=sort(x)
+    if ((x[1]==1 && x[2]==3) || (x[1]==2 && x[2]==4) ) transitions<<-transitions+1
+    else transversions<<-transversions+1
+  }))
+  2*transitions/transversions
 }
