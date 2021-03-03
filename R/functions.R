@@ -171,7 +171,6 @@ exchange_states=function(extended_states_alignment,exchange_prob,exchange_dist){
 #' @examples
 #' test
 simulate_evolution=function(nstates,tree,Q,pi,noise_sd=0,discretization=NA,small_num=0.0001){
-  require(expm)
   tree$edge.P=sapply(simplify = F,tree$edge.length,function(t) expm(t*Q))
   root_states_seq=sample(1:length(pi),nstates,replace=T,prob=pi)
   tree.root=tree$edge[1,1]
@@ -213,7 +212,6 @@ simulate_evolution_node=function(node,tree,states,states_seq){
 
 #' @export
 make_states_alignment_compact=function(states_alignment){
-  require(data.table)
   setDTthreads(1)
   states_alignment=data.table(states_alignment)
   as.matrix(states_alignment[, .(COUNT = .N), by = names(states_alignment)])
@@ -221,7 +219,6 @@ make_states_alignment_compact=function(states_alignment){
 
 #' @export
 get_tree_log_likelihood=function(states_alignment,tree,Q,pi,is_states_alignment_compact){
-  require(expm)
   if (!is_states_alignment_compact) tree$states_alignment=make_states_alignment_compact(states_alignment[,tree$tip.label])
   else tree$states_alignment=states_alignment
   tree$edge.P=sapply(simplify = F,tree$edge.length,function(t) expm(t*Q))
@@ -304,7 +301,6 @@ find_optimal_tree=function(states_alignment,trees,Q,pi,cluster=NULL,clock=F,init
 
 #' @export
 all_unrooted_tree_topologies=function(leaves,i=NULL,baseTree=NULL,branch_length=1){
-  require(ape)
   if (is.null(i) || (i<=3) || is.null(baseTree)) {
     baseTree=stree(3,"star",leaves[1:3])
     i=3
@@ -331,7 +327,6 @@ all_unrooted_tree_topologies=function(leaves,i=NULL,baseTree=NULL,branch_length=
 
 #' @export
 all_rooted_tree_topologies=function(leaves,branch_length=1){
-  require(ape)
   trees=all_unrooted_tree_topologies(c(leaves,"root_indicator"),branch_length=branch_length)
   sapply(simplify = F, trees, function(tree){
     root_indicator_index=which(tree$edge[,2]==length(tree$tip.label))
