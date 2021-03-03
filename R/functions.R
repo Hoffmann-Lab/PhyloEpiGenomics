@@ -99,12 +99,13 @@ intersect_intervals=function(interval_a,interval_b){
 #' @export
 #' @examples
 #' test
-maximize_clock_tree_log_likelihood=function(states_alignment,tree,Q,pi,initial_depth){
+maximize_clock_tree_log_likelihood=function(states_alignment,tree,Q,pi,initial_depth,is_states_alignment_compact=F){
   initial_branch_fractions=initialize_clock_tree_branch_fractions(tree$edge[1,1],tree)
   newTree=tree
+  if (!is_states_alignment_compact) states_alignment=make_states_alignment_compact(states_alignment[,tree$tip.label])
   optimal_branch_lengths=optim(c(initial_branch_fractions,depth=initial_depth),method="L-BFGS-B",lower=c(rep(0.001,length(initial_branch_fractions)),0.1),upper=c(rep(0.999,length(initial_branch_fractions)),10000), function(params) {
     tree=make_tree_from_branch_fractions(tree,params[1:(length(params)-1)],params[length(params)])
-    newTree<<-get_tree_log_likelihood(states_alignment,tree,Q,pi)
+    newTree<<-get_tree_log_likelihood(states_alignment,tree,Q,pi,is_states_alignment_compact=T)
     return(-newTree$lnL)
   })
   return(list(tree=newTree,lnL=-optimal_branch_lengths$value,convergence=(optimal_branch_lengths$convergence==0)))
@@ -218,7 +219,7 @@ make_states_alignment_compact=function(states_alignment){
 }
 
 #' @export
-get_tree_log_likelihood=function(states_alignment,tree,Q,pi,is_states_alignment_compact){
+get_tree_log_likelihood=function(states_alignment,tree,Q,pi,is_states_alignment_compact=F){
   if (!is_states_alignment_compact) tree$states_alignment=make_states_alignment_compact(states_alignment[,tree$tip.label])
   else tree$states_alignment=states_alignment
   tree$edge.P=sapply(simplify = F,tree$edge.length,function(t) expm(t*Q))
