@@ -1,3 +1,10 @@
+#' @author Arne Sahm \email{arne.sahm@@leibniz-fli.de}
+#' @import expm
+#' @import parallel
+#' @import ape
+#' @import data.table
+NULL
+
 #' Tree reconstruction via maximum parsimony
 #'
 #' `maximum_parsimony` determines the single, best fitting among the given tree topologies by maximum parsimony for given data. The respective determined costs wil be attached to the returning phylo object.\cr\cr

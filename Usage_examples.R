@@ -2,11 +2,15 @@
 install.packages("devtools", repos="http://cloud.r-project.org", clean=T)
 devtools::install_github("hoffmann-lab/PhyloEpiGenomics", upgrade="never", force=T, clean=T)
 
+#load library and example data
+library(PhyloEpiGenomics)
 data(PhyloEpiGenomics_example_data)
 
+#original data
 head(nucl_aln)
 head(meth_fraction_aln)
 
+#data converted to required numeric states
 nucl_states_aln=nucl_states_aln=sapply(nucl_aln,function(x) as.numeric(factor(x,levels=c("A","C","G","T"))))
 head(nucl_states_aln)
 
