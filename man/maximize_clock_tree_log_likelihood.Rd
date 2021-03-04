@@ -9,7 +9,8 @@ maximize_clock_tree_log_likelihood(
   tree,
   Q,
   pi,
-  initial_depth
+  initial_depth,
+  is_states_alignment_compact = F
 )
 }
 \arguments{

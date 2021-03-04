@@ -146,6 +146,7 @@ initialize_clock_tree_branch_fractions=function(node,tree){
   return(new_parameter_list)
 }
 
+#' @export
 exchange_states=function(extended_states_alignment,exchange_prob,exchange_dist){
   na.omit(do.call(rbind,sapply(simplify=F,unique(extended_states_alignment[,"gene"]), function(gene) {
     gene_states_alignment=extended_states_alignment[which(extended_states_alignment[,"gene"]==gene),2:ncol(extended_states_alignment)]
@@ -177,7 +178,6 @@ simulate_evolution=function(nstates,tree,Q,pi,noise_sd=0,discretization=NA,small
   tree.root=tree$edge[1,1]
   tree$states_alignment=simulate_evolution_node(tree.root,tree,1:length(pi),root_states_seq)
   tree$states_alignment=tree$states_alignment[,c(tree$tip.label,setdiff(colnames(tree$states_alignment),tree$tip.label))]
-  if(noise_sd>0){
     if (is.na(discretization)){
       tree$states_alignment_noise=tree$states_alignment+round(rnorm(nrow(tree$states_alignment)*ncol(tree$states_alignment),0,noise_sd))
       tree$states_alignment_noise=ifelse(tree$states_alignment_noise<1,1,tree$states_alignment_noise)
@@ -193,7 +193,6 @@ simulate_evolution=function(nstates,tree,Q,pi,noise_sd=0,discretization=NA,small
       tree$frequency_alignment_noise=ifelse(tree$frequency_alignment_noise>1,1,tree$frequency_alignment_noise)
       tree$states_alignment_noise=apply(tree$frequency_alignment_noise,c(1,2),function(x) which(sapply(old_discretization, function(y) x>y[1] && x<=y[2])))
     }
-  } else tree$states_alignment_noise=tree$states_alignment
   return(tree)
 }
 
@@ -347,8 +346,8 @@ maximize_distance_log_likelihoods=function(states_table,Q,pi){
   colnames(species_pairs)=apply(species_pairs,2,function(x) paste0(x,collapse = "_"))
   distance_matrix=matrix(0,nrow=ncol(states_table),ncol=ncol(states_table),dimnames=list(colnames(states_table),colnames(states_table)))
   h=apply(species_pairs,2,function(species_pair)
-    distance_matrix[species_pair[1],species_pair[2]]<<-distance_matrix[species_pair[2],species_pair[1]]<<-optim(100,function(t)
-      get_distance_log_likelihood(states_table[,species_pair[1]],states_table[,species_pair[2]],Q,t,pi),method="Brent",lower=0.1,upper=100000)$par
+    distance_matrix[species_pair[1],species_pair[2]]<<-distance_matrix[species_pair[2],species_pair[1]]<<-optim(1,function(t)
+      get_distance_log_likelihood(states_table[,species_pair[1]],states_table[,species_pair[2]],Q,t,pi),method="L-BFGS-B",lower=0.001,upper=100000)$par
   )
   #distance_matrix=distance_matrix*2
   return(distance_matrix)
