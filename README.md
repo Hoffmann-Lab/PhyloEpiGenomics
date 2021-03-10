@@ -32,6 +32,7 @@ The library works on alignments in the form of dataframes or matrices with sites
 ```R
 library(PhyloEpiGenomics)
 data(PhyloEpiGenomics_example_data)
+
 #nucleotide data (-> nominal scale)
 head(nucl_aln)
  human chimp gorilla orangutan
