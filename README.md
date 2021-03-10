@@ -11,11 +11,13 @@ devtools::install_github("hoffmann-lab/PhyloEpiGenomics", upgrade="never", force
 ### Table of contents
 1. [Data preprocessing](#preprocessing)
 2. [Maximum likelihood ](#ml)
+
   2.1 [Creation of evolutionary models](#models)
   2.2 [Simple tree reconstruction](#simple_ml)
   2.3 [Molecular clocks](#clocks)
 
 <a name="preprocessing">
+
 ### 1. Data preprocessing
 
 The library works on alignments in the form of dataframes or matrices with sites as rows and species/strains as columns. Examples:
