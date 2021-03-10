@@ -1,32 +1,22 @@
----
-title: "PhyloEpiGenomics"
-author: "Arne Sahm"
-output:
-  html_document:
-    toc: yes
-    toc_float: yes
-    toc_depth: 4
-  pdf_document:
-    toc: yes
-subtitle: R-package
----
-<style type="text/css">
-  div.main-container {
-    margin-left: 0px;
-  }
-</style> 
+#R-package PhyloEpiGenomics
 
-This package provides basic phylogenetic tree reconstruction algorithms for genomic or epigenomic data such as maximum likelihood, distance-based methods and parsimony. The library also allows to simulate sequence evolution based on evolutionary models and basic phylogenetic hypothesis testing.
-
-# Installation
+## Installation
 
 ```R
 install.packages("devtools", repos="http://cloud.r-project.org", clean=T)
 devtools::install_github("hoffmann-lab/PhyloEpiGenomics", upgrade="never", force=T, clean=T)
 ```
-# Guide / Overview
+## Guide / Overview
 
-## Data preprocessing
+### Table of contents
+1. [Data preprocessing](#preprocessing)
+2. [Maximum likelihood ](#ml)
+  2.1 [Creation of evolutionary models](#models)
+  2.2 [Simple tree reconstruction](#simple_ml)
+  2.3 [Molecular clocks](#clocks)
+
+<a name="preprocessing">
+### 1. Data preprocessing
 
 The library works on alignments in the form of dataframes or matrices with sites as rows and species/strains as columns. Examples:
 
@@ -83,9 +73,10 @@ head(meth_states_aln)
 5     1     1       1         1
 6     1     1       1         1
 ```
-
-## Maximum likelihood 
-### Creation of evolutionary models
+<a name="ml">
+### 2. Maximum likelihood 
+<a name="models">
+#### 2.1 Creation of evolutionary models
 Tree reconstruction via maximum likelihood requires an evolutionary model. Several well-known models specific for nucleotide data are implemented: JC69 (Jukes and Cantor 1969), K80 (Kimura 1980), F81 (Felsenstein 1981), HKY85 (Hasegawa et al. 1985). For a description of those models see https://en.wikipedia.org/wiki/Models_of_DNA_evolution. In addition, our COOC (cooccurrence) model works both if the underlying data was originally nominal scaled (e.g. nucleotides or amino acids) or interval/ordinal scaled (e.g. methylation fractions). The noJump model should only be used if the underlying data was interval/ordinal scaled. See <Link to paper or bioRXiv> for the specification of the latter two models. Usage examples:
 
 ```R
@@ -121,7 +112,9 @@ $Q
 $pi
 [1] 0.24675 0.04025 0.05675 0.17350 0.48275
 ```
-### Simple tree reconstruction
+
+<a name="simple_ml">
+#### 2.2 Simple tree reconstruction
 
 You can then apply an evolution model of your choice to your data. To do this, you specify the list of tree topologies to be checked and whose branch lengths will each be optimized by the algorithm.
 
@@ -183,7 +176,8 @@ plot(
 ```
 ![](readme_plots/ml_best_meth_tree.jpg)
 
-### Molecular clocks
+<a name="clocks">
+#### 2.3 Molecular clocks
 
 It is possible to apply certain constraints for tree reconstruction, e.g., a molecular clock, i.e. same evolutionary rates on all branches of the tree.
 
@@ -293,7 +287,7 @@ pchisq(2 * (ml_best_meth_tree$lnL - ml_meth_tree_based_on_nucl$lnL),
 #maintained the proportions of the nucleotide tree
 ```
 
-## Distance-based methods
+### 2.3 Distance-based methods
 
 Distance-based tree reconstructions first determines pairwise distances between input sequences and then uses only those distances to determine the best fitting tree. For both of these steps the package offers each one method: Maximum likelihood for determination of the distance matrix and Fitch-Margoliash (least squares) for the acual tree reconstruction. Note, that the distance-based maximum likelihood approach needs an evolutionary model (see the respective chapter above). The methods are independent of each other and therefore can also be combined with algorithms outside of this package.  
 
@@ -327,7 +321,7 @@ kronoviz(
 ```
 ![](readme_plots/distance_based.jpg)
 
-## Parsimony
+### 2.4 Parsimony
 
 The Parsimony method identifies the tree topology that requires the least number of state changes. 
 
@@ -362,7 +356,7 @@ Note, that no branch lengths are assigned. However, other tree reconstruction me
 ```
 ![](readme_plots/parsimony_2.jpg)
 
-## Simulation
+### 2.5 Simulation
 
 Given an evolutionary model (see respective section above), the package allows you to simulate evolution. The first example creates an artificial nucleotide alignment.   
 ```R
