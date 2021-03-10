@@ -75,8 +75,11 @@ head(meth_states_aln)
 6     1     1       1         1
 ```
 <a name="ml">
+
 ### 2. Maximum likelihood 
+
 <a name="models">
+
 #### 2.1 Creation of evolutionary models
 Tree reconstruction via maximum likelihood requires an evolutionary model. Several well-known models specific for nucleotide data are implemented: JC69 (Jukes and Cantor 1969), K80 (Kimura 1980), F81 (Felsenstein 1981), HKY85 (Hasegawa et al. 1985). For a description of those models see https://en.wikipedia.org/wiki/Models_of_DNA_evolution. In addition, our COOC (cooccurrence) model works both if the underlying data was originally nominal scaled (e.g. nucleotides or amino acids) or interval/ordinal scaled (e.g. methylation fractions). The noJump model should only be used if the underlying data was interval/ordinal scaled. See <Link to paper or bioRXiv> for the specification of the latter two models. Usage examples:
 
@@ -115,6 +118,7 @@ $pi
 ```
 
 <a name="simple_ml">
+
 #### 2.2 Simple tree reconstruction
 
 You can then apply an evolution model of your choice to your data. To do this, you specify the list of tree topologies to be checked and whose branch lengths will each be optimized by the algorithm.
@@ -178,6 +182,7 @@ plot(
 ![](readme_plots/ml_best_meth_tree.jpg)
 
 <a name="clocks">
+
 #### 2.3 Molecular clocks
 
 It is possible to apply certain constraints for tree reconstruction, e.g., a molecular clock, i.e. same evolutionary rates on all branches of the tree.
