@@ -53,7 +53,7 @@ my_noJump_model
 
 
 #tree reconstruction functions expect a list of tree topologies that are to be
-#examined/compared
+#examined/compared/optimized
 unrooted_tree_topologies = all_unrooted_tree_topologies(colnames(nucl_states_aln))
 #one of the wrong topologies
 plot(unrooted_tree_topologies[[2]],
@@ -62,7 +62,8 @@ plot(unrooted_tree_topologies[[2]],
 #correct topology
 plot(unrooted_tree_topologies[[3]],
      type = "unrooted",
-     lab4ut = "axial")
+     lab4ut = "axial",
+     rotate.tree = 270)
 
 #tree reconstruction via maximum likelihood, nucleotide example
 ml_best_nucl_tree = find_optimal_tree(nucl_states_aln,
@@ -200,17 +201,11 @@ distance_matrix_nucl = maximize_distance_log_likelihoods(nucl_states_aln, Q =
 
 #reconstruct the tree using neighbour joining from the ape package
 nj_best_nucl_tree = nj(distance_matrix_nucl)
-plot(
-  nj_best_nucl_tree,
-  type = "unrooted",
-  lab4ut = "axial",
-  rotate.tree = 90
-)
 
 #reconstruct the tree using fitch-margoliash
 fm_best_nucl_tree = best_fitch_margoliash(distance_matrix_nucl, unrooted_tree_topologies)
 
-#top: ml, middle: nj, bottom: fm
+nj_best_nucl_tree
 kronoviz(
   list(ml_best_nucl_tree,
        nj_best_nucl_tree,
@@ -222,13 +217,9 @@ kronoviz(
 
 #PARSIMONY
 
-#parsimony requires rooted trees as input
-pars_best_meth_tree = maximum_parsimony(meth_states_aln, rooted_trees = rooted_tree_topologies)
-plot(pars_best_meth_tree)
-
-#but all rooted trees that represent the same unrooted tree result in the same
-#costs
-pars_best_meth_trees = all_parsimony_rooted_trees(meth_states_aln, rooted_trees = rooted_tree_topologies)
+#parsimony requires rooted trees as input but all rooted trees that represent
+#the same unrooted tree result in the same costs
+pars_best_meth_trees = all_parsimony(meth_states_aln, rooted_trees = rooted_tree_topologies)
 sapply(pars_best_meth_trees, function(tree)
   tree$cost_sum)
 #these solution are therefore equivalent
@@ -271,5 +262,103 @@ sim_meth = simulate_evolution(
 head(sim_meth$states_alignment)
 head(sim_meth$frequency_alignment)
 
+#do the same with some noise added to simulate, e.g., sampling errors due to low
+#coverage
 
+sim_meth_noise = simulate_evolution(
+  nstates = 3000,
+  tree = ml_best_meth_tree,
+  Q = my_noJump_model$Q,
+  pi = my_noJump_model$pi,
+  discretization = discretization,
+  noise_sd = 0.1
+)
+head(sim_meth_noise$frequency_alignment)
+head(sim_meth_noise$frequency_alignment_noise)
+
+#disturb the alignment to simulate, e.g., occasional alignment problems
+
+sim_meth_noise_disturbed = exchange_states(
+  sim_meth_noise$frequency_alignment_noise,
+  exchange_dist = 2,
+  exchange_prob = 0.2
+)
+head(sim_meth_noise_disturbed)
+
+
+#GRAPHICS FOR README
+
+dir.create("PhyloEpiGenomics/read.me_plots")
+jpeg("PhyloEpiGenomics/readme_plots/wrong_unrooted_topology.jpg")
+plot(unrooted_tree_topologies[[2]],
+     type = "unrooted",
+     lab4ut = "axial")
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/correct_unrooted_topology.jpg")
+plot(unrooted_tree_topologies[[3]],
+     type = "unrooted",
+     lab4ut = "axial",
+     rotate.tree = 270)
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/ml_best_nucl_tree.jpg")
+plot(
+  ml_best_nucl_tree,
+  type = "unrooted",
+  lab4ut = "axial",
+  rotate.tree = 270
+)
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/ml_best_meth_tree.jpg")
+plot(
+  ml_best_meth_tree,
+  type = "unrooted",
+  lab4ut = "axial",
+  rotate.tree = 270
+)
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/wrong_rooted_topology.jpg")
+plot(rooted_tree_topologies[[15]], lab4ut = "axial")#correct topology
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/correct_rooted_topology.jpg")
+plot(rooted_tree_topologies[[11]], lab4ut = "axial")#one of the wrong topologies
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/ml_best_nucl_tree_clock.jpg")
+plot(ml_best_nucl_tree_clock)
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/ml_meth_tree_based_on_nucl.jpg")
+kronoviz(
+  list(ml_best_nucl_tree, ml_meth_tree_based_on_nucl$tree),
+  type = "unrooted",
+  lab4ut = "axial",
+  rotate.tree = 270,
+)
+add.scale.bar()
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/ml_meth_tree_based_on_nucl_2.jpg")
+kronoviz(
+  list(
+    ml_meth_tree_based_on_nucl$tree,
+    ml_meth_tree_based_on_nucl_2$tree
+  ),
+  type = "unrooted",
+  lab4ut = "axial",
+  rotate.tree = 270
+)
+add.scale.bar()
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/distance_based.jpg")
+kronoviz(
+  list(ml_best_nucl_tree,
+       nj_best_nucl_tree,
+       fm_best_nucl_tree),
+  type = "unrooted",
+  lab4ut = "axial",
+  rotate.tree = 270,
+  cex=1.2
+)
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/parsimony.jpg")
+layout(matrix(c(1:5, 0), nrow = 2))
+sapply(pars_best_meth_trees[11:15], function(x) plot(x,cex=1.2))
+dev.off()
 

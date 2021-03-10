@@ -8,7 +8,7 @@ NULL
 #' Tree reconstruction via maximum parsimony
 #'
 #' `maximum_parsimony` determines the single, best fitting among the given tree topologies by maximum parsimony for given data. The respective determined costs wil be attached to the returning phylo object.\cr\cr
-#' `all_parsimony_rooted_trees` performs parsimony for all tree topologies given. The respective determined costs wil be attached to the phylo objects.\cr\cr
+#' `all_parsimony` performs parsimony for all tree topologies given. The respective determined costs wil be attached to the phylo objects.\cr\cr
 #' `small_parsimony performs` parsimony for one tree topology. The respective determined costs wil be attached to the phylo object.
 #' @param states_table Matrix or data frame containing numericals representing an alignment of interval or ordinal scaled states with sites as rows and species/strains as columns.
 #' @param rooted_trees List of rooted tree topologies of class phylo (library ape) to be analyzed.
@@ -19,13 +19,13 @@ NULL
 #' test
 #' @export
 maximum_parsimony=function(states_table,rooted_trees){
-  rooted_trees=all_parsimony_rooted_trees(states_table,rooted_trees)
+  rooted_trees=all_parsimony(states_table,rooted_trees)
   rooted_trees[[which.min(sapply(simplify=F,rooted_trees,function(tree) tree$cost_sum))]]
 }
 
 #' @rdname  maximum_parsimony
 #' @export
-all_parsimony_rooted_trees=function(states_table,rooted_trees) sapply(simplify=F,rooted_trees,function(tree) small_parsimony(states_table,tree))
+all_parsimony=function(states_table,rooted_trees) sapply(simplify=F,rooted_trees,function(tree) small_parsimony(states_table,tree))
 
 #' @rdname  maximum_parsimony
 #' @export
@@ -147,16 +147,25 @@ initialize_clock_tree_branch_fractions=function(node,tree){
 }
 
 #' @export
-exchange_states=function(extended_states_alignment,exchange_prob,exchange_dist){
-  na.omit(do.call(rbind,sapply(simplify=F,unique(extended_states_alignment[,"gene"]), function(gene) {
-    gene_states_alignment=extended_states_alignment[which(extended_states_alignment[,"gene"]==gene),2:ncol(extended_states_alignment)]
+exchange_states=function(alignment,exchange_prob,exchange_dist,gene_info=NULL,overwrite=F){
+  if(is.null(gene_info)) gene_info=rep(1,nrow(alignment))
+  na.omit(do.call(rbind,sapply(simplify=F,unique(gene_info), function(gene) {
+    gene_states_alignment=alignment[which(gene_info==gene),]
     if(nrow(gene_states_alignment)<2) return(NA)
     exchange_table_1=matrix(data=sample(c("exchange","no_exchange"),nrow(gene_states_alignment)*ncol(gene_states_alignment),prob=c(exchange_prob,1-exchange_prob),replace=T),nrow=nrow(gene_states_alignment),ncol=ncol(gene_states_alignment),dimnames=list(1:nrow(gene_states_alignment),colnames(gene_states_alignment)))
-    exchange_table=matrix(data=0,nrow=nrow(gene_states_alignment),ncol=ncol(gene_states_alignment),dimnames = list(rownames(gene_states_alignment),colnames(gene_states_alignment)))
-    exchanged_table=matrix(data=0,nrow=nrow(gene_states_alignment),ncol=ncol(gene_states_alignment),dimnames = list(rownames(gene_states_alignment),colnames(gene_states_alignment)))
+    exchange_table=matrix(data=F,nrow=nrow(gene_states_alignment),ncol=ncol(gene_states_alignment),dimnames = list(rownames(gene_states_alignment),colnames(gene_states_alignment)))
+    exchanged_table=matrix(data=NA,nrow=nrow(gene_states_alignment),ncol=ncol(gene_states_alignment),dimnames = list(rownames(gene_states_alignment),colnames(gene_states_alignment)))
     sapply(1:nrow(gene_states_alignment), function(row) sapply(1:ncol(gene_states_alignment), function(col){
-      exchange_table[row,col]<<-ifelse(exchange_table_1[row,col]=="exchange",sample(max(row-exchange_dist,1):(min(row+exchange_dist,nrow(gene_states_alignment))),1),row)
-      exchanged_table[row,col]<<-gene_states_alignment[exchange_table[row,col],col]
+      if (is.na(exchanged_table[row,col]) && exchange_table_1[row,col]=="exchange"){
+        possible_exchange_rows=unique(c(row,intersect(max(row-exchange_dist,1):(min(row+exchange_dist,nrow(gene_states_alignment))),which(!exchange_table[,col]))))
+        exchange_row=sample(possible_exchange_rows,1)
+        exchanged_table[row,col]<<-gene_states_alignment[exchange_row,col]
+        if (!overwrite) {
+          exchanged_table[exchange_row,col]<<-gene_states_alignment[row,col]
+          exchange_table[row,col]<<-T
+          exchange_table[exchange_row,col]<<-T
+        }
+      } else exchanged_table[row,col]<<-gene_states_alignment[row,col]
     }))
     exchanged_table
   })))

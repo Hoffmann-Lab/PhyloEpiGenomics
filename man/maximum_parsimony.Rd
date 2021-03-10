@@ -2,13 +2,13 @@
 % Please edit documentation in R/functions.R
 \name{maximum_parsimony}
 \alias{maximum_parsimony}
-\alias{all_parsimony_rooted_trees}
+\alias{all_parsimony}
 \alias{small_parsimony}
 \title{Tree reconstruction via maximum parsimony}
 \usage{
 maximum_parsimony(states_table, rooted_trees)
 
-all_parsimony_rooted_trees(states_table, rooted_trees)
+all_parsimony(states_table, rooted_trees)
 
 small_parsimony(states_table, rooted_tree)
 }
@@ -21,7 +21,7 @@ small_parsimony(states_table, rooted_tree)
 }
 \description{
 \code{maximum_parsimony} determines the single, best fitting among the given tree topologies by maximum parsimony for given data. The respective determined costs wil be attached to the returning phylo object.\cr\cr
-\code{all_parsimony_rooted_trees} performs parsimony for all tree topologies given. The respective determined costs wil be attached to the phylo objects.\cr\cr
+\code{all_parsimony} performs parsimony for all tree topologies given. The respective determined costs wil be attached to the phylo objects.\cr\cr
 \verb{small_parsimony performs} parsimony for one tree topology. The respective determined costs wil be attached to the phylo object.
 }
 \details{

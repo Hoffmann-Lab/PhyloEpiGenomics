@@ -107,9 +107,63 @@ $pi
 ```
 ##### Application of evolutionary models for tree reconstruction
 
+You can then apply an evolution model of your choice to your data. To do this, you specify the list of tree topologies to be checked and whose branch lengths will each be optimized by the algorithm.
 
 ```R
+#tree reconstruction functions expect a list of tree topologies that are to be
+#examined/compared/optimized
+unrooted_tree_topologies = all_unrooted_tree_topologies(colnames(nucl_states_aln))
+#one of the wrong topologies
+plot(unrooted_tree_topologies[[2]],
+     type = "unrooted",
+     lab4ut = "axial")
 ```
+![](readme_plots/wrong_unrooted_topology.jpg)
 
 ```R
+#correct topology
+plot(unrooted_tree_topologies[[3]],
+     type = "unrooted",
+     lab4ut = "axial",
+     rotate.tree = 270)
 ```
+![](readme_plots/correct_unrooted_topology.jpg)
+
+```R
+ml_best_nucl_tree = find_optimal_tree(nucl_states_aln,
+                                      trees = unrooted_tree_topologies,
+                                      Q = my_HKY85_model$Q,
+                                      pi = my_HKY85_model$pi)
+plot(
+  ml_best_nucl_tree,
+  type = "unrooted",
+  lab4ut = "axial",
+  rotate.tree = 270
+)
+```
+![](readme_plots/ml_best_nucl_tree.jpg)
+
+```R
+#tree reconstruction via maximum likelihood using multiple CPU cores,
+#methylation example
+library(parallel)
+#using up to as many CPUs as examined trees reduces the runtime
+cluster = makeCluster(max(3, detectCores()))
+ml_best_meth_tree = find_optimal_tree(
+  cluster = cluster,
+  meth_states_aln,
+  trees = unrooted_tree_topologies,
+  Q = my_noJump_model$Q,
+  pi = my_noJump_model$pi
+)
+plot(
+  ml_best_meth_tree,
+  type = "unrooted",
+  lab4ut = "axial",
+  rotate.tree = 270
+)
+```
+![](readme_plots/ml_best_meth_tree.jpg)
+
+
+
