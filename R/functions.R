@@ -154,9 +154,9 @@ exchange_states=function(alignment,exchange_prob,exchange_dist,gene_info=NULL,ov
     if(nrow(gene_states_alignment)<2) return(NA)
     exchange_table_1=matrix(data=sample(c("exchange","no_exchange"),nrow(gene_states_alignment)*ncol(gene_states_alignment),prob=c(exchange_prob,1-exchange_prob),replace=T),nrow=nrow(gene_states_alignment),ncol=ncol(gene_states_alignment),dimnames=list(1:nrow(gene_states_alignment),colnames(gene_states_alignment)))
     exchange_table=matrix(data=F,nrow=nrow(gene_states_alignment),ncol=ncol(gene_states_alignment),dimnames = list(rownames(gene_states_alignment),colnames(gene_states_alignment)))
-    exchanged_table=matrix(data=NA,nrow=nrow(gene_states_alignment),ncol=ncol(gene_states_alignment),dimnames = list(rownames(gene_states_alignment),colnames(gene_states_alignment)))
+    exchanged_table=gene_states_alignment
     sapply(1:nrow(gene_states_alignment), function(row) sapply(1:ncol(gene_states_alignment), function(col){
-      if (is.na(exchanged_table[row,col]) && exchange_table_1[row,col]=="exchange"){
+      if ((!exchange_table[row,col]) && (exchange_table_1[row,col]=="exchange")){
         possible_exchange_rows=unique(c(row,intersect(max(row-exchange_dist,1):(min(row+exchange_dist,nrow(gene_states_alignment))),which(!exchange_table[,col]))))
         exchange_row=sample(possible_exchange_rows,1)
         exchanged_table[row,col]<<-gene_states_alignment[exchange_row,col]
@@ -165,7 +165,7 @@ exchange_states=function(alignment,exchange_prob,exchange_dist,gene_info=NULL,ov
           exchange_table[row,col]<<-T
           exchange_table[exchange_row,col]<<-T
         }
-      } else exchanged_table[row,col]<<-gene_states_alignment[row,col]
+      } 
     }))
     exchanged_table
   })))

@@ -53,7 +53,7 @@ my_noJump_model
 
 
 #tree reconstruction functions expect a list of tree topologies that are to be
-#examined/compared/optimized
+#examined/compared/optimized; in this case unrooted topologies are used
 unrooted_tree_topologies = all_unrooted_tree_topologies(colnames(nucl_states_aln))
 #one of the wrong topologies
 plot(unrooted_tree_topologies[[2]],
@@ -100,14 +100,12 @@ plot(
 
 #using a clock implies rooted trees
 rooted_tree_topologies = all_rooted_tree_topologies(colnames(nucl_states_aln))
-plot(rooted_tree_topologies[[15]], lab4ut = "axial")#correct topology
-plot(rooted_tree_topologies[[11]], lab4ut = "axial")#one of the wrong topologies
 
-stopCluster(cluster)
-cluster = makeCluster(max(15, detectCores()))#15 tree topologies to examine
+#15 tree topologies to examine
+cluster2 = makeCluster(max(length(rooted_tree_topologies), detectCores()))
 
 ml_best_nucl_tree_clock = find_optimal_tree(
-  cluster = cluster,
+  cluster = cluster2,
   nucl_states_aln,
   trees = rooted_tree_topologies,
   Q = my_HKY85_model$Q,
@@ -183,7 +181,7 @@ pchisq(
   lower.tail = F
 )
 #-> the scenario s significantly more likely than the scenario that maintained
-#the proportions of the nucl tree
+#the proportions of the nucleotide tree
 
 #the scenario that let all branches vary freely has four degrees of freedom more
 #than the scenario that maintained the proportions of the nucl tree
@@ -191,21 +189,22 @@ pchisq(2 * (ml_best_meth_tree$lnL - ml_meth_tree_based_on_nucl$lnL),
        4,
        lower.tail = F)
 #-> the scenario is also significantly more likely than the scenario that
-#maintained the proprtions of the nucl tree
+#maintained the proportions of the nucleotide tree
 
 #DISTANCE BASED
 
 #get the distance matrix using maximum likelihood
 distance_matrix_nucl = maximize_distance_log_likelihoods(nucl_states_aln, Q =
                                                            my_HKY85_model$Q, pi = my_HKY85_model$pi)
+distance_matrix_nucl
 
 #reconstruct the tree using neighbour joining from the ape package
+require(ape)
 nj_best_nucl_tree = nj(distance_matrix_nucl)
 
 #reconstruct the tree using fitch-margoliash
 fm_best_nucl_tree = best_fitch_margoliash(distance_matrix_nucl, unrooted_tree_topologies)
 
-nj_best_nucl_tree
 kronoviz(
   list(ml_best_nucl_tree,
        nj_best_nucl_tree,
@@ -218,13 +217,26 @@ kronoviz(
 #PARSIMONY
 
 #parsimony requires rooted trees as input but all rooted trees that represent
-#the same unrooted tree result in the same costs
+#the same unrooted tree result in the same costs, i.e. the method cannot
+#determine a good outgroup
 pars_best_meth_trees = all_parsimony(meth_states_aln, rooted_trees = rooted_tree_topologies)
 sapply(pars_best_meth_trees, function(tree)
   tree$cost_sum)
 #these solution are therefore equivalent
 layout(matrix(c(1:5, 0), nrow = 2))
 sapply(pars_best_meth_trees[11:15], plot)
+
+#Parsimony does not assign branch lengths, you can use, e.g., maximum likelihood
+#for that purpose
+pars_best_meth_tree = maximize_tree_log_likelihood(
+  meth_states_aln,
+  tree = pars_best_meth_trees[[15]],
+  Q = my_noJump_model$Q,
+  pi = my_noJump_model$pi
+)
+
+layout(matrix(1))
+plot(pars_best_meth_tree)
 
 #SIMULATION 
 
@@ -233,6 +245,7 @@ sim_tree_nucl=ml_best_nucl_tree_clock
 #the example takes the tree calculated before but multiplies the time with 7 to
 #result in more substitutions
 sim_tree_nucl$edge.length=sim_tree_nucl$edge.length*7
+
 #simulate the evolution of 5000 nucleotides
 sim_nucl = simulate_evolution(
   nstates = 5000,
@@ -240,51 +253,45 @@ sim_nucl = simulate_evolution(
   Q = my_HKY85_model$Q,
   pi = my_HKY85_model$pi
 )
+
 #the simulation contains also the states at the ancestral nodes
 head(sim_nucl$states_alignment)
-layout(matrix(1))
+
 ml_best_nucl_tree_clock$node.label=setNames(5:7,5:7)
 plot(ml_best_nucl_tree_clock,show.node.label = T)
+
 #convert to ACGT
 sim_nucl_aln=apply(sim_nucl$states_alignment,c(1,2),function(x) c("A","C","G","T")[x])
 head(sim_nucl_aln)
 
 #simulate the evolution of 3000 methylation fractions, if the discretization is
-#passed instead of states fractions are returned directly - assuming a uniform
-#within state distribution
-sim_meth = simulate_evolution(
-  nstates = 3000,
-  tree = ml_best_meth_tree,
-  Q = my_noJump_model$Q,
-  pi = my_noJump_model$pi,
-  discretization = discretization
-)
-head(sim_meth$states_alignment)
-head(sim_meth$frequency_alignment)
+#passed instead of states also fractions are returned - assuming a uniform
+#within state distribution; in the example below there is also some noise added
+#to simulate, e.g., sampling errors due to low coverage
 
-#do the same with some noise added to simulate, e.g., sampling errors due to low
-#coverage
+#get a tree for the simulation from real data
 
 sim_meth_noise = simulate_evolution(
   nstates = 3000,
-  tree = ml_best_meth_tree,
+  tree = pars_best_meth_tree$tree,
   Q = my_noJump_model$Q,
   pi = my_noJump_model$pi,
   discretization = discretization,
   noise_sd = 0.1
 )
+
+head(sim_meth_noise$states_alignment)
 head(sim_meth_noise$frequency_alignment)
 head(sim_meth_noise$frequency_alignment_noise)
 
-#disturb the alignment to simulate, e.g., occasional alignment problems
+#disturbs the alignment to simulate, e.g., occasional alignment problems
 
 sim_meth_noise_disturbed = exchange_states(
-  sim_meth_noise$frequency_alignment_noise,
+  sim_meth_noise$frequency_alignment_noise[,1:4],
   exchange_dist = 2,
   exchange_prob = 0.2
 )
 head(sim_meth_noise_disturbed)
-
 
 #GRAPHICS FOR README
 
@@ -361,4 +368,10 @@ jpeg("PhyloEpiGenomics/readme_plots/parsimony.jpg")
 layout(matrix(c(1:5, 0), nrow = 2))
 sapply(pars_best_meth_trees[11:15], function(x) plot(x,cex=1.2))
 dev.off()
-
+jpeg("PhyloEpiGenomics/readme_plots/parsimony_2.jpg")
+layout(matrix(1))
+plot(pars_best_meth_tree$tree)
+dev.off()
+jpeg("PhyloEpiGenomics/readme_plots/inner_nodes_labeled.jpg")
+plot(ml_best_nucl_tree_clock,show.node.label = T)
+dev.off()
