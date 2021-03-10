@@ -10,12 +10,16 @@ devtools::install_github("hoffmann-lab/PhyloEpiGenomics", upgrade="never", force
 
 ### Table of contents
 [1. Data preprocessing](#preprocessing)
+
 [2. Maximum likelihood ](#ml)
   * [2.1 Creation of evolutionary models](#models)
   * [2.2 Simple tree reconstruction](#simple_ml)
   * [2.3 Molecular clocks](#clocks)
+  
 [3. Distance-based methods](#distance)
+
 [4. Parsimony](#parsimony)
+
 [5. Simulation](#simulation)
 
 
