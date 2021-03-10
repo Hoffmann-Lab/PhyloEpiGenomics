@@ -9,11 +9,15 @@ devtools::install_github("hoffmann-lab/PhyloEpiGenomics", upgrade="never", force
 ## Guide / Overview
 
 ### Table of contents
-1. [Data preprocessing](#preprocessing)
-2. [Maximum likelihood ](#ml)
-  * 2.1 [Creation of evolutionary models](#models)
-  * 2.2 [Simple tree reconstruction](#simple_ml)
-  * 2.3 [Molecular clocks](#clocks)
+[1. Data preprocessing](#preprocessing)
+[2. Maximum likelihood ](#ml)
+  * [2.1 Creation of evolutionary models](#models)
+  * [2.2 Simple tree reconstruction](#simple_ml)
+  * [2.3 Molecular clocks](#clocks)
+[3. Distance-based methods](#distance)
+[4. Parsimony](#parsimony)
+[5. Simulation](#simulation)
+
 
 <a name="preprocessing">
 
@@ -292,8 +296,9 @@ pchisq(2 * (ml_best_meth_tree$lnL - ml_meth_tree_based_on_nucl$lnL),
 #-> the scenario is also significantly more likely than the scenario that
 #maintained the proportions of the nucleotide tree
 ```
+<a name="distance">
 
-### 2.3 Distance-based methods
+### 3. Distance-based methods
 
 Distance-based tree reconstructions first determines pairwise distances between input sequences and then uses only those distances to determine the best fitting tree. For both of these steps the package offers each one method: Maximum likelihood for determination of the distance matrix and Fitch-Margoliash (least squares) for the acual tree reconstruction. Note, that the distance-based maximum likelihood approach needs an evolutionary model (see the respective chapter above). The methods are independent of each other and therefore can also be combined with algorithms outside of this package.  
 
@@ -327,7 +332,9 @@ kronoviz(
 ```
 ![](readme_plots/distance_based.jpg)
 
-### 2.4 Parsimony
+<a name="parsimony">
+
+### 4. Parsimony
 
 The Parsimony method identifies the tree topology that requires the least number of state changes. 
 
@@ -362,7 +369,9 @@ Note, that no branch lengths are assigned. However, other tree reconstruction me
 ```
 ![](readme_plots/parsimony_2.jpg)
 
-### 2.5 Simulation
+<a name="simulation">
+
+### 4. Simulation
 
 Given an evolutionary model (see respective section above), the package allows you to simulate evolution. The first example creates an artificial nucleotide alignment.   
 ```R
