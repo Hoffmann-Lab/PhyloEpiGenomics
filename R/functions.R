@@ -1,7 +1,7 @@
 #' @author Arne Sahm \email{arne.sahm@@leibniz-fli.de}
 #' @import expm
 #' @import parallel
-#' @import ape
+#' @import ape 
 #' @import data.table
 NULL
 
