@@ -1,7 +1,7 @@
 #' @author Arne Sahm \email{arne.sahm@@leibniz-fli.de}
 #' @import expm
 #' @import parallel
-#' @import ape 
+#' @import ape
 #' @import data.table
 NULL
 
@@ -465,8 +465,8 @@ make_evolutionary_model=function(states_table=NULL,nstates=NULL,model="JC69",pi=
     Q=sapply(1:nstates,function(x) sapply(1:nstates, function(y)  pi[x]*cooccurrence_matrices_balanced_frac_all[x,y]))
   } else if (model=="jc69") Q=matrix(c(0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0),ncol=4,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
   else if (model=="k80") Q=matrix(c(0,1,kappa,1,1,0,1,kappa,kappa,1,0,1,1,kappa,1,0),ncol=4,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
-  else if (model=="f81") Q=matrix(c(0,pi[2],pi[3],pi[4],pi[1],0,pi[3],pi[4],pi[1],pi[2],0,pi[4],pi[1],pi[2],pi[3],0),ncol=4,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
-  else if (model=="hky85") Q=matrix(c(0,pi[2],pi[3]*kappa,pi[4],pi[1],0,pi[3],pi[4]*kappa,pi[1]*kappa,pi[2],0,pi[4],pi[1],pi[2]*kappa,pi[3],0),ncol=4,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
+  else if (model=="f81") Q=matrix(c(0,pi[2],pi[3],pi[4],pi[1],0,pi[3],pi[4],pi[1],pi[2],0,pi[4],pi[1],pi[2],pi[3],0),ncol=4,byrow = T,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
+  else if (model=="hky85") Q=matrix(c(0,pi[2],pi[3]*kappa,pi[4],pi[1],0,pi[3],pi[4]*kappa,pi[1]*kappa,pi[2],0,pi[4],pi[1],pi[2]*kappa,pi[3],0),ncol=4,byrow = T,dimnames=list(c("A","C","G","T"),c("A","C","G","T")))
   Q=Q/sum(rowSums(Q)*pi)/100#PEM calibration
   sapply(1:nrow(Q), function (x) Q[x,x]<<- -sum(Q[x,]))
   return(list(Q=Q,pi=pi))
