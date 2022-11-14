@@ -181,9 +181,9 @@ exchange_states=function(alignment,exchange_prob,exchange_dist,gene_info=NULL,ov
 #' @export
 #' @examples
 #' test
-simulate_evolution=function(nstates,tree,Q,pi,noise_sd=0,discretization=NA,small_num=0.0001){
+simulate_evolution=function(nstates,tree,Q,pi,noise_sd=0,discretization=NA,small_num=0.0001,root_states_seq=NULL){
   tree$edge.P=sapply(simplify = F,tree$edge.length,function(t) expm(t*Q))
-  root_states_seq=sample(1:length(pi),nstates,replace=T,prob=pi)
+  if (is.null(root_states_seq)) root_states_seq=sample(1:length(pi),nstates,replace=T,prob=pi)
   tree.root=tree$edge[1,1]
   tree$states_alignment=simulate_evolution_node(tree.root,tree,1:length(pi),root_states_seq)
   tree$states_alignment=tree$states_alignment[,c(tree$tip.label,setdiff(colnames(tree$states_alignment),tree$tip.label))]
