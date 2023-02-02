@@ -103,9 +103,10 @@ maximize_clock_tree_log_likelihood=function(states_alignment,tree,Q,pi,initial_d
   initial_branch_fractions=initialize_clock_tree_branch_fractions(tree$edge[1,1],tree)
   newTree=tree
   if (!is_states_alignment_compact) states_alignment=make_states_alignment_compact(states_alignment[,tree$tip.label])
+  tree_log_likelihood_formulas=get_tree_log_likelihood_formulas(tree,pi,states_alignment[,tree$tip.label])#costs about 25% for examples; possible further optimization strategy: for genome-wide analyses all possible formulas could be calculated before...
   optimal_branch_lengths=optim(c(initial_branch_fractions,depth=initial_depth),method="L-BFGS-B",lower=c(rep(0.001,length(initial_branch_fractions)),0.1),upper=c(rep(0.999,length(initial_branch_fractions)),10000), function(params) {
     tree=make_tree_from_branch_fractions(tree,params[1:(length(params)-1)],params[length(params)])
-    newTree<<-get_tree_log_likelihood(states_alignment,tree,Q,pi,is_states_alignment_compact=T)
+    newTree<<-get_tree_log_likelihood(states_alignment,tree,Q,pi,T,tree_log_likelihood_formulas)
     return(-newTree$lnL)
   })
   return(list(tree=newTree,lnL=-optimal_branch_lengths$value,convergence=(optimal_branch_lengths$convergence==0)))
@@ -221,40 +222,45 @@ simulate_evolution_node=function(node,tree,states,states_seq){
 
 #' @export
 make_states_alignment_compact=function(states_alignment){
-  setDTthreads(1)
-  states_alignment=data.table(states_alignment)
-  as.matrix(states_alignment[, .(COUNT = .N), by = names(states_alignment)])
+  id=apply(states_alignment,1,function(x) paste(x,collapse = ""))
+  h=sapply(unique(id),function(x) which(id==x))
+  as.matrix(cbind(states_alignment[sapply(h,function(x) x[1]),],COUNT=sapply(h,length)))
 }
 
 #' @export
-get_tree_log_likelihood=function(states_alignment,tree,Q,pi,is_states_alignment_compact=F){
+get_tree_log_likelihood=function(states_alignment,tree,Q,pi,is_states_alignment_compact=F,tree_log_likelihood_formulas=NULL){
   if (!is_states_alignment_compact) tree$states_alignment=make_states_alignment_compact(states_alignment[,tree$tip.label])
   else tree$states_alignment=states_alignment
-  tree$edge.P=sapply(simplify = F,tree$edge.length,function(t) expm(t*Q))
-  tree$states_alignment=cbind(tree$states_alignment,lnL=apply(tree$states_alignment,1,function (homolog_states){
-    tree$tip.states=homolog_states[1:(length(homolog_states)-1)]
-    tree.root=tree$edge[1,1]
-    root_likelihoods=get_node_likelihoods(tree.root,tree,1:length(pi))
-    log(sum(sapply(1:length(pi), function(root_state) pi[root_state]*root_likelihoods[root_state])))
-  }))
+  if (is.null(tree_log_likelihood_formulas)) tree_log_likelihood_formulas=get_tree_log_likelihood_formulas(tree,pi,states_alignment[,tree$tip.label])
+  tree$edge.P=Ps=sapply(simplify = F,tree$edge.length, function(t) expm(t*Q))#time measurement shows that this costs ~10-15%
+  tree$states_alignment=cbind(tree$states_alignment,lnL=sapply(tree_log_likelihood_formulas,function(formula) eval(formula)))#this costs about 60%
   tree$states_alignment=cbind(tree$states_alignment,`lnL*COUNT`=tree$states_alignment[,"lnL"]*tree$states_alignment[,"COUNT"])
   tree$lnL=sum(tree$states_alignment[,"lnL*COUNT"])
-  return(tree)
+  tree$tree_log_likelihood_formulas=tree_log_likelihood_formulas#time measurement shows that last three lines cost almost nothing
+  tree
 }
 
-get_node_likelihoods=function(node,tree,states){
-  if (node<=length(tree$tip.label)) return(sapply(states,function(state) as.numeric(state==tree$tip.states[node])))
+get_tree_log_likelihood_formulas=function(tree,pi,states_alignment){
+  tree.root=tree$edge[1,1]
+  apply(states_alignment,1,function(tip.states)
+    parse(text=paste0("log(",paste0(collapse="+",sapply(1:length(pi), function(root_state) paste0(pi[root_state],"*",get_node_likelihoods_formula(root_state,tree.root,tree,pi,tip.states)))),")"))
+  )
+}
+
+get_node_likelihoods_formula=function(state,node,tree,pi,tip.states){
+  if (node<=length(tree$tip.label)) return(state==tip.states[node])
   else {
     child_node_infos=sapply(simplify = F,which(tree$edge[,1]==node),function(child_node_edge_index) {
       child_node=tree$edge[child_node_edge_index,2]
-      child_likelihoods=get_node_likelihoods(child_node,tree,states)
-      list(child_node_edge_index=child_node_edge_index,child_node=child_node,child_likelihoods=child_likelihoods)
+      list(child_node_edge_index=child_node_edge_index,child_node=child_node)
     })
-    return(sapply(states,function(state_i){
-      prod(sapply(child_node_infos,function(child_node_info) {
-        sum(sapply(states, function(state_j) tree$edge.P[[child_node_info$child_node_edge_index]][state_i,state_j]*child_node_info$child_likelihoods[state_j]))
-      }))
-    }))
+    return(paste0("(",paste0(collapse="*",sapply(child_node_infos,function(child_node_info) 
+      paste0("(",paste0(collapse="+",unlist(sapply(1:length(pi), function(state_j) {
+          node_formula=get_node_likelihoods_formula(state_j,child_node_info$child_node,tree,pi,tip.states)
+          if(is.logical(node_formula)) {if (node_formula) node_formula="" else return(NULL)} else node_formula=paste0(node_formula,"*")
+          paste0(node_formula,"Ps[[",child_node_info$child_node_edge_index,"]][",state,",",state_j,"]")
+      } ))),")")
+    )),")"))
   }
 }
 
@@ -262,9 +268,10 @@ get_node_likelihoods=function(node,tree,states){
 maximize_tree_log_likelihood=function(states_alignment,tree,Q,pi,is_states_alignment_compact=F){
   newTree=tree
   if (!is_states_alignment_compact) states_alignment=make_states_alignment_compact(states_alignment[,tree$tip.label])
+  tree_log_likelihood_formulas=get_tree_log_likelihood_formulas(tree,pi,states_alignment[,tree$tip.label])#costs about 25% for examples; possible further optimization strategy: for genome-wide analyses all possible formulas could be calculated before...
   optimal_branch_lengths=optim(control=list(factr=1e10),tree$edge.length,method="L-BFGS-B",lower=rep(0.1,nrow(tree$edge)),upper=rep(100000,nrow(tree$edge)), function(branch_lengths) {
     tree$edge.length=branch_lengths
-    newTree<<-get_tree_log_likelihood(states_alignment,tree,Q,pi,is_states_alignment_compact=T)
+    newTree<<-get_tree_log_likelihood(states_alignment,tree,Q,pi,T,tree_log_likelihood_formulas)
     return(-newTree$lnL)
   })
   return(list(tree=newTree,lnL=-optimal_branch_lengths$value,convergence=(optimal_branch_lengths$convergence==0)))
@@ -279,11 +286,12 @@ maximize_tree_log_likelihood_extended=function(states_alignment,tree,Q,pi,branch
     if (!(sum(is.na(branches_to_evolutionary_rate_classes)==0) && length(branches_to_evolutionary_rate_classes)==length(tree$edge.length))) stop("branches_to_evolutionary_rate_classes must be an integer and has to contain as many elemements as tree has branches")
   }
   if (!is_states_alignment_compact) states_alignment=make_states_alignment_compact(states_alignment[,tree$tip.label])
+  tree_log_likelihood_formulas=get_tree_log_likelihood_formulas(tree,pi,states_alignment[,tree$tip.label])#costs about 25% for examples; possible further optimization strategy: for genome-wide analyses all possible formulas could be calculated before...
   evolutionary_rate_classes=unique(branches_to_evolutionary_rate_classes)
   evolutionary_rates=rep(1,length(evolutionary_rate_classes))
-  ret=optim(control=list(factr=1e9),evolutionary_rates,method="L-BFGS-B",lower=tree$edge.length/100000,upper=tree$edge.length/0.1, function(evolutionary_rates) {
+  ret=optim(control=list(factr=1e9),evolutionary_rates,method="L-BFGS-B",lower=tree$edge.length/100000,upper=tree$edge.length/0.001, function(evolutionary_rates) {
     tree$edge.length=sapply(1:length(tree$edge.length),function(i) tree$edge.length[i]*evolutionary_rates[branches_to_evolutionary_rate_classes[i]])
-    newTree<<-get_tree_log_likelihood(states_alignment,tree,Q,pi,is_states_alignment_compact=T)
+    newTree<<-get_tree_log_likelihood(states_alignment,tree,Q,pi,T,tree_log_likelihood_formulas)
     return(-newTree$lnL)
   })
   return(list(tree=newTree,lnL=-ret$value,convergence=(ret$convergence==0),message=ret$message,evolutionary_rates=ret$par))
