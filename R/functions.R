@@ -2,7 +2,6 @@
 #' @import expm
 #' @import parallel
 #' @import ape
-#' @import data.table
 NULL
 
 #' Tree reconstruction via maximum parsimony
